@@ -309,7 +309,7 @@ async function run() {
       res.send(result);
     });
 
-    // ✅ Add comment
+    // ✅ Add comments
     app.post("/comments", async (req, res) => {
       const comment = req.body; // postId, text, userEmail, userName, time
       const result = await commentsCollection.insertOne(comment);
