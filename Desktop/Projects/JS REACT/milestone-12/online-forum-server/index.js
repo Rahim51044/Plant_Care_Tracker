@@ -26,99 +26,124 @@
 //   }
 // });
 
-// async function run() {
-//   try {
-//     // Connect the client to the server	(optional starting in v4.7)
-//     await client.connect();
+// // async function run() {
+// //   try {
+// //     // Connect the client to the server	(optional starting in v4.7)
+// //     await client.connect();
 
-//       // All collections
-//         const postsCollection = client.db("forumDB").collection("posts");
-//         const usersCollection = client.db("forumDB").collection("users");
-//         const commentsCollection = client.db("forumDB").collection("comments");
-//         const announcementsCollection = client.db("forumDB").collection("announcements");
-//         const tagsCollection = client.db("forumDB").collection("tags");
+// //       // All collections
+// //         const postsCollection = client.db("forumDB").collection("posts");
+// //         const usersCollection = client.db("forumDB").collection("users");
+// //         const commentsCollection = client.db("forumDB").collection("comments");
+// //         const announcementsCollection = client.db("forumDB").collection("announcements");
+// //         const tagsCollection = client.db("forumDB").collection("tags");
 
         
 
-// // Add post related
-// app.post("/posts", async (req, res) => {
-//   const post = req.body;
-//   const result = await postsCollection.insertOne(post);
-//   res.send(result);
-// });
 
-
-
-// // GET post count for a user
-// app.get("/posts/user/count", async (req, res) => {
-//   const email = req.query.email;
-//   const count = await postsCollection.countDocuments({ authorEmail: email });
-//   res.send({ count });
-// });
-
-
-
-// app.get("/posts", async (req, res) => {
+// async function run() {
 //   try {
-//     const { email } = req.query;
+//     await client.connect();
 
-//     // Debug log (you can remove later)
-//     console.log("Filtering by email:", email);
+//     const db = client.db("forumDB");
+//     const postsCollection = db.collection("posts");
+//     const usersCollection = db.collection("users");
+//     const commentsCollection = db.collection("comments");
+//     const announcementsCollection = db.collection("announcements");
+//     const tagsCollection = db.collection("tags");
 
-//     let query = {};
-//     if (email) {
-//       query = { authorEmail: email }; // ⚠️ Must match exactly
-//     }
+//     // ✅ Add new post
+//     app.post("/posts", async (req, res) => {
+//       const post = req.body;
+//       const result = await postsCollection.insertOne(post);
+//       res.send(result);
+//     });
 
-//     const posts = await postsCollection
-//       .find(query)
-//       .sort({ createdAt: -1 })
-//       .toArray();
+//     // ✅ Get post count for specific user
+//     app.get("/posts/user/count", async (req, res) => {
+//       const email = req.query.email;
+//       const count = await postsCollection.countDocuments({ authorEmail: email });
+//       res.send({ count });
+//     });
 
-//     res.send(posts);
-//   } catch (err) {
-//     console.error("Error fetching posts:", err);
-//     res.status(500).send({ message: "Internal Server Error" });
-//   }
-// });
+//     // ✅ Get posts with optional email filter + pagination
+//     app.get("/posts", async (req, res) => {
+//       try {
+//         const { email, page = 1, limit = 5 } = req.query;
+//         const skip = (parseInt(page) - 1) * parseInt(limit);
+//         let query = {};
 
+//         if (email) {
+//           query = { authorEmail: email };
+//         }
 
-// // 📁 backend/routes/posts.js
-// app.get("/posts", async (req, res) => {
-//   const page = parseInt(req.query.page) || 1;
-//   const limit = parseInt(req.query.limit) || 5;
-//   const skip = (page - 1) * limit;
+//         const posts = await postsCollection
+//           .find(query)
+//           .sort({ createdAt: -1 })
+//           .skip(skip)
+//           .limit(parseInt(limit))
+//           .toArray();
 
-//   const posts = await postsCollection
-//     .find()
-//     .sort({ createdAt: -1 })
-//     .skip(skip)
-//     .limit(limit)
-//     .toArray();
+//         const total = await postsCollection.countDocuments(query);
+//         res.send({ posts, total });
+//       } catch (err) {
+//         console.error("Error fetching posts:", err);
+//         res.status(500).send({ message: "Internal Server Error" });
+//       }
+//     });
 
-//   const total = await postsCollection.estimatedDocumentCount();
-//   res.send({ posts, total });
-// });
+//     // ✅ Popular posts sorted by vote difference
+//     app.get("/posts/popular", async (req, res) => {
+//       const page = parseInt(req.query.page) || 1;
+//       const limit = parseInt(req.query.limit) || 5;
+//       const skip = (page - 1) * limit;
 
-// app.get("/posts/popular", async (req, res) => {
-//   const page = parseInt(req.query.page) || 1;
-//   const limit = parseInt(req.query.limit) || 5;
-//   const skip = (page - 1) * limit;
+//       const posts = await postsCollection.aggregate([
+//         {
+//           $addFields: {
+//             voteDifference: { $subtract: ["$upVote", "$downVote"] },
+//           },
+//         },
+//         { $sort: { voteDifference: -1 } },
+//         { $skip: skip },
+//         { $limit: limit },
+//       ]).toArray();
 
-//   const posts = await postsCollection.aggregate([
-//     {
-//       $addFields: {
-//         voteDifference: { $subtract: ["$upVote", "$downVote"] },
-//       },
-//     },
-//     { $sort: { voteDifference: -1 } },
-//     { $skip: skip },
-//     { $limit: limit },
-//   ]).toArray();
+//       const total = await postsCollection.countDocuments();
+//       res.send({ posts, total });
+//     });
 
-//   const total = await postsCollection.countDocuments();
-//   res.send({ posts, total });
-// });
+//     // ✅ Root route
+//     app.get("/", (req, res) => {
+//       res.send("✅ Online Forum is running");
+//     });
+
+//     // ✅ Post details (optional)
+//     app.get("/post/:id", async (req, res) => {
+//       const id = req.params.id;
+//       const post = await postsCollection.findOne({ _id: new ObjectId(id) });
+//       const comments = await commentsCollection.find({ postId: id }).toArray();
+//       res.send({ ...post, comments });
+//     });
+
+//     // ✅ Voting API
+//     app.patch("/post/vote/:id", async (req, res) => {
+//       const { type } = req.body; // "up" or "down"
+//       const update = type === "up" ? { $inc: { upVote: 1 } } : { $inc: { downVote: 1 } };
+//       const result = await postsCollection.updateOne({ _id: new ObjectId(req.params.id) }, update);
+//       res.send(result);
+//     });
+
+//     // ✅ Add comment
+//     app.post("/comments", async (req, res) => {
+//       const comment = req.body; // postId, text, userEmail, userName, time
+//       const result = await commentsCollection.insertOne(comment);
+//       await postsCollection.updateOne(
+//         { _id: new ObjectId(comment.postId) },
+//         { $inc: { commentCount: 1 } }
+//       );
+//       res.send(result);
+//     });
 
 
 
@@ -147,13 +172,20 @@
 
 
 // // ✅ Simple root route
-// app.get("/", (req, res) => {
-//   res.send("✅ Online Forum is running");
-// });
+// // app.get("/", (req, res) => {
+// //   res.send("✅ Online Forum is running");
+// // });
 
 //   app.listen(port, () => {
 //       console.log(`🚀 Server running on port ${port}`);
 //     });
+
+
+
+
+
+
+
 
 
 
@@ -289,7 +321,7 @@ async function run() {
     });
 
 
-    
+
     // ✅ Confirm MongoDB connection
     await client.db("admin").command({ ping: 1 });
     console.log("✅ MongoDB Connected");
