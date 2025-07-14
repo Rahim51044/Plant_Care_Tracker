@@ -288,6 +288,8 @@ async function run() {
       res.send(result);
     });
 
+
+    
     // ✅ Confirm MongoDB connection
     await client.db("admin").command({ ping: 1 });
     console.log("✅ MongoDB Connected");

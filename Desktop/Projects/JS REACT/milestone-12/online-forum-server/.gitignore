@@ -1,2 +1,26 @@
 node_modules
 .env
+
+
+
+
+
+
+
+# Ignore everything outside current project folder
+../../*
+
+# Or ignore specific system/user folders
+*.lnk
+*.docx
+*.png
+*.jpg
+*.webp
+*.rar
+*.ini
+*.txt
+node_modules/
+.vscode/
+AppData/
+Documents/
+Downloads/
